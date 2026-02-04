@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workout Progress Tracker</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 16px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.card {
+  background: #020617;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #22c55e;
+  color: #020617;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.exercise {
+  border: 1px solid #1e293b;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  height: 10px;
+  background: #1e293b;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress {
+  height: 100%;
+  background: #22c55e;
+  width: 0%;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row button {
+  flex: 1;
+  background: #38bdf8;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Workout Tracker</h1>
+
+<div class="card">
+  <h3>Add Exercise</h3>
+  <input id="name" placeholder="Exercise name" />
+  <input id="startWeight" type="number" placeholder="Start weight" />
+  <input id="goalWeight" type="number" placeholder="Goal weight" />
+  <input id="currentWeight" type="number" placeholder="Current weight" />
+  <input id="reps" type="number" placeholder="Reps per set" />
+  <input id="repMin" type="number" placeholder="Rep range min" />
+  <input id="repMax" type="number" placeholder="Rep range max" />
+  <input id="increment" type="number" placeholder="Weight increment" />
+  <button onclick="addExercise()">Add</button>
+</div>
+
+<div id="exercises"></div>
+
+<script>
+let exercises = JSON.parse(localStorage.getItem("exercises")) || [];
+
+function save() {
+  localStorage.setItem("exercises", JSON.stringify(exercises));
+  render();
+}
+
+function progressPercent(ex) {
+  const effectiveWeight =
+    ex.currentWeight +
+    Math.max(0, ex.reps - ex.repMin) * ex.increment;
+
+  const pct =
+    ((effectiveWeight - ex.startWeight) /
+      (ex.goalWeight - ex.startWeight)) * 100;
+
+  return Math.min(100, Math.max(0, pct));
+}
+
+function addExercise() {
+  exercises.push({
+    name: name.value,
+    startWeight: +startWeight.value,
+    goalWeight: +goalWeight.value,
+    currentWeight: +currentWeight.value,
+    reps: +reps.value,
+    repMin: +repMin.value,
+    repMax: +repMax.value,
+    increment: +increment.value,
+  });
+  save();
+}
+
+function incRep(i) {
+  exercises[i].reps++;
+  save();
+}
+
+function incWeight(i) {
+  exercises[i].currentWeight += exercises[i].increment;
+  save();
+}
+
+function render() {
+  exercisesDiv.innerHTML = "";
+  exercises.forEach((ex, i) => {
+    const pct = progressPercent(ex).toFixed(1);
+
+    exercisesDiv.innerHTML += `
+      <div class="exercise">
+        <h3>${ex.name}</h3>
+        <div class="progress-bar">
+          <div class="progress" style="width:${pct}%"></div>
+        </div>
+        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax} reps)</p>
+        <p>Current: ${ex.currentWeight} × ${ex.reps}</p>
+        <div class="row">
+          <button onclick="incRep(${i})">+1 Rep</button>
+          <button onclick="incWeight(${i})">+${ex.increment} Weight</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>
