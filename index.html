@@ -67,20 +67,41 @@ function renderExercises() {
     card.appendChild(title);
 
     // Editable fields
-    const fields = ['startWeight','currentWeight','goalWeight','repMin','repMax','weightIncrement','set1','set2','set3'];
+    const fields = [
+      { key: 'name', label: 'Exercise Name' },
+      { key: 'startWeight', label: 'Start Weight' },
+      { key: 'currentWeight', label: 'Current Weight' },
+      { key: 'goalWeight', label: 'Goal Weight' },
+      { key: 'repMin', label: 'Rep Min' },
+      { key: 'repMax', label: 'Rep Max' },
+      { key: 'weightIncrement', label: 'Weight Increment' },
+      { key: 'set1', label: 'Set 1' },
+      { key: 'set2', label: 'Set 2' },
+      { key: 'set3', label: 'Set 3' }
+    ];
+
     const fieldDiv = document.createElement('div');
     fieldDiv.className = 'input-group';
+
     fields.forEach(f => {
       const input = document.createElement('input');
-      input.value = f.startsWith('set') ? ex.sets[parseInt(f[3])-1] : ex[f] || '';
-      input.placeholder = f;
+      if(f.key.startsWith('set')) {
+        input.value = ex.sets[parseInt(f.key[3])-1];
+      } else if(f.key==='repMin' || f.key==='repMax') {
+        input.value = ex.repRange[f.key==='repMin'?'min':'max'];
+      } else {
+        input.value = ex[f.key];
+      }
+      input.placeholder = f.label;
       input.oninput = () => {
-        if(f.startsWith('set')) {
-          ex.sets[parseInt(f[3])-1] = parseInt(input.value) || ex.repRange.min;
-        } else if(f==='repMin' || f==='repMax') {
-          ex.repRange[f==='repMin'?'min':'max'] = parseInt(input.value) || 0;
+        if(f.key.startsWith('set')) {
+          ex.sets[parseInt(f.key[3])-1] = parseInt(input.value) || ex.repRange.min;
+        } else if(f.key==='repMin' || f.key==='repMax') {
+          ex.repRange[f.key==='repMin'?'min':'max'] = parseInt(input.value) || 0;
+        } else if(f.key==='name') {
+          ex.name = input.value;
         } else {
-          ex[f] = parseFloat(input.value) || 0;
+          ex[f.key] = parseFloat(input.value) || 0;
         }
         renderExercises();
       };
