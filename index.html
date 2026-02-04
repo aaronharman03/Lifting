@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Workout Progress Tracker</title>
+<title>Workout Tracker</title>
+
+<link rel="manifest" href="manifest.json">
 
 <style>
 body {
@@ -13,14 +15,12 @@ body {
   padding: 16px;
 }
 
-h1 {
-  text-align: center;
-}
+h1 { text-align: center; }
 
-.card {
+.card, .exercise {
   background: #020617;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 14px;
   margin-bottom: 16px;
 }
 
@@ -38,42 +38,35 @@ button {
   padding: 10px;
   border-radius: 8px;
   border: none;
-  background: #22c55e;
-  color: #020617;
   font-weight: bold;
-  width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
-.exercise {
-  border: 1px solid #1e293b;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
+.green { background: #22c55e; }
+.blue { background: #38bdf8; }
+.gray { background: #64748b; }
 
 .progress-bar {
   height: 10px;
   background: #1e293b;
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .progress {
   height: 100%;
   background: #22c55e;
-  width: 0%;
 }
 
 .row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
-.row button {
-  flex: 1;
-  background: #38bdf8;
+.set-log {
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
 </style>
 </head>
@@ -92,7 +85,7 @@ button {
   <input id="repMin" type="number" placeholder="Rep range min" />
   <input id="repMax" type="number" placeholder="Rep range max" />
   <input id="increment" type="number" placeholder="Weight increment" />
-  <button onclick="addExercise()">Add</button>
+  <button class="green" onclick="addExercise()">Add Exercise</button>
 </div>
 
 <div id="exercises"></div>
@@ -110,11 +103,14 @@ function progressPercent(ex) {
     ex.currentWeight +
     Math.max(0, ex.reps - ex.repMin) * ex.increment;
 
-  const pct =
-    ((effectiveWeight - ex.startWeight) /
-      (ex.goalWeight - ex.startWeight)) * 100;
-
-  return Math.min(100, Math.max(0, pct));
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      ((effectiveWeight - ex.startWeight) /
+        (ex.goalWeight - ex.startWeight)) * 100
+    )
+  );
 }
 
 function addExercise() {
@@ -127,6 +123,16 @@ function addExercise() {
     repMin: +repMin.value,
     repMax: +repMax.value,
     increment: +increment.value,
+    sets: []
+  });
+  save();
+}
+
+function logSet(i) {
+  exercises[i].sets.unshift({
+    weight: exercises[i].currentWeight,
+    reps: exercises[i].reps,
+    time: new Date().toLocaleTimeString()
   });
   save();
 }
@@ -141,6 +147,13 @@ function incWeight(i) {
   save();
 }
 
+function move(i, dir) {
+  const target = i + dir;
+  if (target < 0 || target >= exercises.length) return;
+  [exercises[i], exercises[target]] = [exercises[target], exercises[i]];
+  save();
+}
+
 function render() {
   exercisesDiv.innerHTML = "";
   exercises.forEach((ex, i) => {
@@ -148,23 +161,42 @@ function render() {
 
     exercisesDiv.innerHTML += `
       <div class="exercise">
+        <div class="row">
+          <button class="gray" onclick="move(${i},-1)">↑</button>
+          <button class="gray" onclick="move(${i},1)">↓</button>
+        </div>
+
         <h3>${ex.name}</h3>
+
         <div class="progress-bar">
           <div class="progress" style="width:${pct}%"></div>
         </div>
-        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax} reps)</p>
+        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax})</p>
         <p>Current: ${ex.currentWeight} × ${ex.reps}</p>
+
         <div class="row">
-          <button onclick="incRep(${i})">+1 Rep</button>
-          <button onclick="incWeight(${i})">+${ex.increment} Weight</button>
+          <button class="blue" onclick="incRep(${i})">+1 Rep</button>
+          <button class="blue" onclick="incWeight(${i})">+${ex.increment} Wt</button>
         </div>
+
+        <button class="green" onclick="logSet(${i})">Log Set</button>
+
+        ${ex.sets.slice(0,5).map(
+          s => `<div class="set-log">• ${s.weight} × ${s.reps} @ ${s.time}</div>`
+        ).join("")}
       </div>
     `;
   });
 }
 
 render();
+
+/* PWA service worker */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
 </script>
 
 </body>
 </html>
+
