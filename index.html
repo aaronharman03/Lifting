@@ -8,13 +8,11 @@
   body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
   h1 { text-align: center; margin-bottom: 20px; }
   .exercise-card { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .input-group { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; }
-  input { padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 100px; }
+  .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  input { padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 120px; }
   button { padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; }
-  .sets { display: flex; gap: 10px; margin-bottom: 10px; }
-  .set { display: flex; align-items: center; gap: 5px; }
   .progress-bar-container { width: 100%; background: #eee; border-radius: 5px; height: 20px; margin-bottom: 5px; }
-  .progress-bar { height: 100%; background: #4caf50; border-radius: 5px 0 0 5px; width: 0%; }
+  .progress-bar { height: 100%; background: #4caf50; border-radius: 5px 0 0 5px; width: 0%; transition: width 0.3s; }
 </style>
 </head>
 <body>
@@ -24,6 +22,7 @@
 <div class="input-group">
   <input type="text" id="exerciseName" placeholder="Exercise Name">
   <input type="number" id="startWeight" placeholder="Start Weight">
+  <input type="number" id="currentWeight" placeholder="Current Weight">
   <input type="number" id="goalWeight" placeholder="Goal Weight">
   <input type="number" id="repMin" placeholder="Rep Min">
   <input type="number" id="repMax" placeholder="Rep Max">
@@ -67,42 +66,27 @@ function renderExercises() {
     title.textContent = ex.name;
     card.appendChild(title);
 
-    // Weight controls
-    const weightDiv = document.createElement('div');
-    weightDiv.className = 'input-group';
-    const minusWeight = document.createElement('button');
-    minusWeight.textContent = `-${ex.weightIncrement}kg`;
-    minusWeight.onclick = () => changeWeight(idx, -ex.weightIncrement);
-    const plusWeight = document.createElement('button');
-    plusWeight.textContent = `+${ex.weightIncrement}kg`;
-    plusWeight.onclick = () => changeWeight(idx, ex.weightIncrement);
-    const weightText = document.createElement('span');
-    weightText.textContent = `${ex.currentWeight} kg (Goal: ${ex.goalWeight} kg)`;
-    weightDiv.appendChild(minusWeight);
-    weightDiv.appendChild(weightText);
-    weightDiv.appendChild(plusWeight);
-    card.appendChild(weightDiv);
-
-    // Sets
-    const setsDiv = document.createElement('div');
-    setsDiv.className = 'sets';
-    ex.sets.forEach((reps, sIdx) => {
-      const setDiv = document.createElement('div');
-      setDiv.className = 'set';
-      const minusBtn = document.createElement('button');
-      minusBtn.textContent = '-';
-      minusBtn.onclick = () => changeReps(idx, sIdx, -1);
-      const plusBtn = document.createElement('button');
-      plusBtn.textContent = '+';
-      plusBtn.onclick = () => changeReps(idx, sIdx, 1);
-      const setText = document.createElement('span');
-      setText.textContent = `Set ${sIdx+1}: ${reps} reps`;
-      setDiv.appendChild(minusBtn);
-      setDiv.appendChild(setText);
-      setDiv.appendChild(plusBtn);
-      setsDiv.appendChild(setDiv);
+    // Editable fields
+    const fields = ['startWeight','currentWeight','goalWeight','repMin','repMax','weightIncrement','set1','set2','set3'];
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'input-group';
+    fields.forEach(f => {
+      const input = document.createElement('input');
+      input.value = f.startsWith('set') ? ex.sets[parseInt(f[3])-1] : ex[f] || '';
+      input.placeholder = f;
+      input.oninput = () => {
+        if(f.startsWith('set')) {
+          ex.sets[parseInt(f[3])-1] = parseInt(input.value) || ex.repRange.min;
+        } else if(f==='repMin' || f==='repMax') {
+          ex.repRange[f==='repMin'?'min':'max'] = parseInt(input.value) || 0;
+        } else {
+          ex[f] = parseFloat(input.value) || 0;
+        }
+        renderExercises();
+      };
+      fieldDiv.appendChild(input);
     });
-    card.appendChild(setsDiv);
+    card.appendChild(fieldDiv);
 
     // Progress bar
     const progress = calculateProgress(ex).toFixed(1);
@@ -122,10 +106,11 @@ function renderExercises() {
   });
 }
 
-// --- Event Functions ---
+// --- Add Exercise ---
 function addExercise() {
   const name = document.getElementById('exerciseName').value;
   const startWeight = parseFloat(document.getElementById('startWeight').value);
+  const currentWeight = parseFloat(document.getElementById('currentWeight').value);
   const goalWeight = parseFloat(document.getElementById('goalWeight').value);
   const repMin = parseInt(document.getElementById('repMin').value);
   const repMax = parseInt(document.getElementById('repMax').value);
@@ -134,7 +119,7 @@ function addExercise() {
   const set2 = parseInt(document.getElementById('set2').value);
   const set3 = parseInt(document.getElementById('set3').value);
 
-  if (!name || isNaN(startWeight) || isNaN(goalWeight) || isNaN(repMin) || isNaN(repMax) || isNaN(weightIncrement) || isNaN(set1) || isNaN(set2) || isNaN(set3)) {
+  if(!name || isNaN(startWeight) || isNaN(currentWeight) || isNaN(goalWeight) || isNaN(repMin) || isNaN(repMax) || isNaN(weightIncrement) || isNaN(set1) || isNaN(set2) || isNaN(set3)) {
     alert('Please fill all fields correctly.');
     return;
   }
@@ -142,29 +127,16 @@ function addExercise() {
   exercises.push({
     name,
     startWeight,
-    currentWeight: startWeight,
+    currentWeight,
     goalWeight,
-    repRange: { min: repMin, max: repMax },
+    repRange: {min: repMin, max: repMax},
     weightIncrement,
     sets: [set1,set2,set3]
   });
 
   renderExercises();
 }
-
-// --- Change reps/weight ---
-function changeReps(exIdx, setIdx, delta) {
-  const ex = exercises[exIdx];
-  ex.sets[setIdx] = Math.min(Math.max(ex.sets[setIdx] + delta, ex.repRange.min), ex.repRange.max);
-  renderExercises();
-}
-
-function changeWeight(exIdx, delta) {
-  const ex = exercises[exIdx];
-  ex.currentWeight = Math.min(Math.max(ex.currentWeight + delta, ex.startWeight), ex.goalWeight);
-  renderExercises();
-}
-
 </script>
+
 </body>
 </html>
