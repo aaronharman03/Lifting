@@ -42,9 +42,9 @@ button {
   margin-top: 6px;
 }
 
-.green { background: #22c55e; }
-.blue { background: #38bdf8; }
-.gray { background: #64748b; }
+.green { background: #22c55e; color: #020617; }
+.blue { background: #38bdf8; color: #020617; }
+.gray { background: #64748b; color: #020617; }
 
 .progress-bar {
   height: 10px;
@@ -91,8 +91,22 @@ button {
 <div id="exercises"></div>
 
 <script>
+// ===== DOM REFERENCES (FIXED) =====
+const exercisesDiv = document.getElementById("exercises");
+
+const nameInput = document.getElementById("name");
+const startWeightInput = document.getElementById("startWeight");
+const goalWeightInput = document.getElementById("goalWeight");
+const currentWeightInput = document.getElementById("currentWeight");
+const repsInput = document.getElementById("reps");
+const repMinInput = document.getElementById("repMin");
+const repMaxInput = document.getElementById("repMax");
+const incrementInput = document.getElementById("increment");
+
+// ===== STATE =====
 let exercises = JSON.parse(localStorage.getItem("exercises")) || [];
 
+// ===== HELPERS =====
 function save() {
   localStorage.setItem("exercises", JSON.stringify(exercises));
   render();
@@ -113,27 +127,23 @@ function progressPercent(ex) {
   );
 }
 
+// ===== ACTIONS =====
 function addExercise() {
+  if (!nameInput.value) return;
+
   exercises.push({
-    name: name.value,
-    startWeight: +startWeight.value,
-    goalWeight: +goalWeight.value,
-    currentWeight: +currentWeight.value,
-    reps: +reps.value,
-    repMin: +repMin.value,
-    repMax: +repMax.value,
-    increment: +increment.value,
+    name: nameInput.value,
+    startWeight: +startWeightInput.value,
+    goalWeight: +goalWeightInput.value,
+    currentWeight: +currentWeightInput.value,
+    reps: +repsInput.value,
+    repMin: +repMinInput.value,
+    repMax: +repMaxInput.value,
+    increment: +incrementInput.value,
     sets: []
   });
-  save();
-}
 
-function logSet(i) {
-  exercises[i].sets.unshift({
-    weight: exercises[i].currentWeight,
-    reps: exercises[i].reps,
-    time: new Date().toLocaleTimeString()
-  });
+  nameInput.value = "";
   save();
 }
 
@@ -147,6 +157,15 @@ function incWeight(i) {
   save();
 }
 
+function logSet(i) {
+  exercises[i].sets.unshift({
+    weight: exercises[i].currentWeight,
+    reps: exercises[i].reps,
+    time: new Date().toLocaleTimeString()
+  });
+  save();
+}
+
 function move(i, dir) {
   const target = i + dir;
   if (target < 0 || target >= exercises.length) return;
@@ -154,8 +173,10 @@ function move(i, dir) {
   save();
 }
 
+// ===== RENDER =====
 function render() {
   exercisesDiv.innerHTML = "";
+
   exercises.forEach((ex, i) => {
     const pct = progressPercent(ex).toFixed(1);
 
@@ -171,7 +192,7 @@ function render() {
         <div class="progress-bar">
           <div class="progress" style="width:${pct}%"></div>
         </div>
-        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax})</p>
+        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax} reps)</p>
         <p>Current: ${ex.currentWeight} × ${ex.reps}</p>
 
         <div class="row">
@@ -191,7 +212,7 @@ function render() {
 
 render();
 
-/* PWA service worker */
+// ===== PWA =====
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
