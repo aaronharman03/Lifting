@@ -1,221 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Workout Tracker</title>
-
-<link rel="manifest" href="manifest.json">
-
-<style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #0f172a;
-  color: #e5e7eb;
-  padding: 16px;
-}
-
-h1 { text-align: center; }
-
-.card, .exercise {
-  background: #020617;
-  padding: 16px;
-  border-radius: 14px;
-  margin-bottom: 16px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  border: none;
-  background: #020617;
-  color: #e5e7eb;
-}
-
-button {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  font-weight: bold;
-  margin-top: 6px;
-}
-
-.green { background: #22c55e; color: #020617; }
-.blue { background: #38bdf8; color: #020617; }
-.gray { background: #64748b; color: #020617; }
-
-.progress-bar {
-  height: 10px;
-  background: #1e293b;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 6px;
-}
-
-.progress {
-  height: 100%;
-  background: #22c55e;
-}
-
-.row {
-  display: flex;
-  gap: 6px;
-}
-
-.set-log {
-  font-size: 0.85rem;
-  opacity: 0.85;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercise Tracker PWA</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .exercise-card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .weight-controls, .sets {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .set {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    button {
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+    .progress-bar-container {
+      width: 100%;
+      background: #eee;
+      border-radius: 5px;
+      height: 20px;
+      margin-bottom: 5px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #4caf50;
+      border-radius: 5px 0 0 5px;
+      width: 0%;
+    }
+  </style>
 </head>
-
 <body>
 
-<h1>Workout Tracker</h1>
+  <h1>Exercise Tracker PWA</h1>
+  <div id="exercise-list"></div>
 
-<div class="card">
-  <h3>Add Exercise</h3>
-  <input id="name" placeholder="Exercise name" />
-  <input id="startWeight" type="number" placeholder="Start weight" />
-  <input id="goalWeight" type="number" placeholder="Goal weight" />
-  <input id="currentWeight" type="number" placeholder="Current weight" />
-  <input id="reps" type="number" placeholder="Reps per set" />
-  <input id="repMin" type="number" placeholder="Rep range min" />
-  <input id="repMax" type="number" placeholder="Rep range max" />
-  <input id="increment" type="number" placeholder="Weight increment" />
-  <button class="green" onclick="addExercise()">Add Exercise</button>
-</div>
+  <script>
+    // --- Exercise Data ---
+    const exercises = [
+      {
+        id: 1,
+        name: "Bench Press",
+        startWeight: 20,
+        currentWeight: 20,
+        goalWeight: 50,
+        repRange: { min: 6, max: 12 },
+        weightIncrement: 5,
+        sets: [6,6,6],
+      },
+      {
+        id: 2,
+        name: "Squat",
+        startWeight: 30,
+        currentWeight: 30,
+        goalWeight: 80,
+        repRange: { min: 6, max: 12 },
+        weightIncrement: 5,
+        sets: [6,6,6],
+      }
+    ];
 
-<div id="exercises"></div>
+    // --- Helper Functions ---
+    function calculateRepPoints(sets, repRange) {
+      return sets.reduce((acc, reps) => acc + (reps - repRange.min), 0);
+    }
 
-<script>
-// ===== DOM REFERENCES =====
-const exercisesDiv = document.getElementById("exercises");
+    function calculateProgress(ex) {
+      const { startWeight, currentWeight, goalWeight, repRange, weightIncrement, sets } = ex;
+      const maxRepPoints = (repRange.max - repRange.min) * 3;
+      const repPoints = calculateRepPoints(sets, repRange);
+      const weightIncrementsAchieved = Math.floor((currentWeight - startWeight) / weightIncrement);
+      const weightPoints = weightIncrementsAchieved * 3 * maxRepPoints;
+      const totalWeightIncrements = Math.floor((goalWeight - startWeight) / weightIncrement);
+      const totalPoints = totalWeightIncrements * 3 * maxRepPoints + maxRepPoints;
+      return Math.min(((repPoints + weightPoints) / totalPoints) * 100, 100);
+    }
 
-const nameInput = document.getElementById("name");
-const startWeightInput = document.getElementById("startWeight");
-const goalWeightInput = document.getElementById("goalWeight");
-const currentWeightInput = document.getElementById("currentWeight");
-const repsInput = document.getElementById("reps");
-const repMinInput = document.getElementById("repMin");
-const repMaxInput = document.getElementById("repMax");
-const incrementInput = document.getElementById("increment");
+    // --- Render Exercises ---
+    const exerciseList = document.getElementById("exercise-list");
 
-// ===== STATE =====
-let exercises = JSON.parse(localStorage.getItem("exercises")) || [];
+    function renderExercises() {
+      exerciseList.innerHTML = '';
+      exercises.forEach(ex => {
+        const card = document.createElement("div");
+        card.className = "exercise-card";
 
-// ===== SAVE =====
-function save() {
-  localStorage.setItem("exercises", JSON.stringify(exercises));
-  render();
-}
+        const title = document.createElement("h2");
+        title.textContent = ex.name;
+        card.appendChild(title);
 
-// ===== ✅ CORRECT PROGRESS MATH =====
-function progressPercent(ex) {
-  const performance =
-    (ex.currentWeight - ex.startWeight) +
-    (ex.reps - ex.repMin) * ex.increment;
+        // Weight controls
+        const weightControls = document.createElement("div");
+        weightControls.className = "weight-controls";
+        const minusWeight = document.createElement("button");
+        minusWeight.textContent = `-${ex.weightIncrement}kg`;
+        minusWeight.onclick = () => changeWeight(ex.id, -ex.weightIncrement);
+        const plusWeight = document.createElement("button");
+        plusWeight.textContent = `+${ex.weightIncrement}kg`;
+        plusWeight.onclick = () => changeWeight(ex.id, ex.weightIncrement);
+        const weightText = document.createElement("span");
+        weightText.textContent = `${ex.currentWeight} kg (Goal: ${ex.goalWeight} kg)`;
+        weightControls.appendChild(minusWeight);
+        weightControls.appendChild(weightText);
+        weightControls.appendChild(plusWeight);
+        card.appendChild(weightControls);
 
-  const maxPerformance =
-    (ex.goalWeight - ex.startWeight) +
-    (ex.repMax - ex.repMin) * ex.increment;
+        // Sets
+        const setsDiv = document.createElement("div");
+        setsDiv.className = "sets";
+        ex.sets.forEach((reps, idx) => {
+          const setDiv = document.createElement("div");
+          setDiv.className = "set";
+          const minusBtn = document.createElement("button");
+          minusBtn.textContent = "-";
+          minusBtn.onclick = () => changeReps(ex.id, idx, -1);
+          const plusBtn = document.createElement("button");
+          plusBtn.textContent = "+";
+          plusBtn.onclick = () => changeReps(ex.id, idx, 1);
+          const setText = document.createElement("span");
+          setText.textContent = `Set ${idx + 1}: ${reps} reps`;
+          setDiv.appendChild(minusBtn);
+          setDiv.appendChild(setText);
+          setDiv.appendChild(plusBtn);
+          setsDiv.appendChild(setDiv);
+        });
+        card.appendChild(setsDiv);
 
-  const pct = (performance / maxPerformance) * 100;
-  return Math.min(100, Math.max(0, pct));
-}
+        // Progress bar
+        const progress = calculateProgress(ex).toFixed(1);
+        const progressContainer = document.createElement("div");
+        progressContainer.className = "progress-bar-container";
+        const progressBar = document.createElement("div");
+        progressBar.className = "progress-bar";
+        progressBar.style.width = `${progress}%`;
+        progressContainer.appendChild(progressBar);
+        card.appendChild(progressContainer);
 
-// ===== ACTIONS =====
-function addExercise() {
-  if (!nameInput.value) return;
+        const progressText = document.createElement("span");
+        progressText.textContent = `${progress}%`;
+        card.appendChild(progressText);
 
-  exercises.push({
-    name: nameInput.value,
-    startWeight: +startWeightInput.value,
-    goalWeight: +goalWeightInput.value,
-    currentWeight: +currentWeightInput.value,
-    reps: +repsInput.value,
-    repMin: +repMinInput.value,
-    repMax: +repMaxInput.value,
-    increment: +incrementInput.value,
-    sets: []
-  });
+        exerciseList.appendChild(card);
+      });
+    }
 
-  nameInput.value = "";
-  save();
-}
+    function changeReps(exId, setIndex, delta) {
+      const ex = exercises.find(e => e.id === exId);
+      ex.sets[setIndex] = Math.min(Math.max(ex.sets[setIndex] + delta, ex.repRange.min), ex.repRange.max);
+      renderExercises();
+    }
 
-function incRep(i) {
-  exercises[i].reps++;
-  save();
-}
+    function changeWeight(exId, delta) {
+      const ex = exercises.find(e => e.id === exId);
+      ex.currentWeight = Math.min(Math.max(ex.currentWeight + delta, ex.startWeight), ex.goalWeight);
+      renderExercises();
+    }
 
-function incWeight(i) {
-  exercises[i].currentWeight += exercises[i].increment;
-  save();
-}
-
-function logSet(i) {
-  exercises[i].sets.unshift({
-    weight: exercises[i].currentWeight,
-    reps: exercises[i].reps,
-    time: new Date().toLocaleTimeString()
-  });
-  save();
-}
-
-function move(i, dir) {
-  const target = i + dir;
-  if (target < 0 || target >= exercises.length) return;
-  [exercises[i], exercises[target]] = [exercises[target], exercises[i]];
-  save();
-}
-
-// ===== RENDER =====
-function render() {
-  exercisesDiv.innerHTML = "";
-
-  exercises.forEach((ex, i) => {
-    const pct = progressPercent(ex).toFixed(1);
-
-    exercisesDiv.innerHTML += `
-      <div class="exercise">
-        <div class="row">
-          <button class="gray" onclick="move(${i},-1)">↑</button>
-          <button class="gray" onclick="move(${i},1)">↓</button>
-        </div>
-
-        <h3>${ex.name}</h3>
-
-        <div class="progress-bar">
-          <div class="progress" style="width:${pct}%"></div>
-        </div>
-        <p>${pct}% to goal (${ex.goalWeight} @ ${ex.repMax} reps)</p>
-        <p>Current: ${ex.currentWeight} × ${ex.reps}</p>
-
-        <div class="row">
-          <button class="blue" onclick="incRep(${i})">+1 Rep</button>
-          <button class="blue" onclick="incWeight(${i})">+${ex.increment} Wt</button>
-        </div>
-
-        <button class="green" onclick="logSet(${i})">Log Set</button>
-
-        ${ex.sets.slice(0,5).map(
-          s => `<div class="set-log">• ${s.weight} × ${s.reps} @ ${s.time}</div>`
-        ).join("")}
-      </div>
-    `;
-  });
-}
-
-render();
-
-// ===== PWA =====
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
-</script>
-
+    renderExercises();
+  </script>
 </body>
 </html>
