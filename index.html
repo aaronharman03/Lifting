@@ -91,7 +91,7 @@ button {
 <div id="exercises"></div>
 
 <script>
-// ===== DOM REFERENCES (FIXED) =====
+// ===== DOM REFERENCES =====
 const exercisesDiv = document.getElementById("exercises");
 
 const nameInput = document.getElementById("name");
@@ -106,25 +106,24 @@ const incrementInput = document.getElementById("increment");
 // ===== STATE =====
 let exercises = JSON.parse(localStorage.getItem("exercises")) || [];
 
-// ===== HELPERS =====
+// ===== SAVE =====
 function save() {
   localStorage.setItem("exercises", JSON.stringify(exercises));
   render();
 }
 
+// ===== ✅ CORRECT PROGRESS MATH =====
 function progressPercent(ex) {
-  const effectiveWeight =
-    ex.currentWeight +
-    Math.max(0, ex.reps - ex.repMin) * ex.increment;
+  const performance =
+    (ex.currentWeight - ex.startWeight) +
+    (ex.reps - ex.repMin) * ex.increment;
 
-  return Math.min(
-    100,
-    Math.max(
-      0,
-      ((effectiveWeight - ex.startWeight) /
-        (ex.goalWeight - ex.startWeight)) * 100
-    )
-  );
+  const maxPerformance =
+    (ex.goalWeight - ex.startWeight) +
+    (ex.repMax - ex.repMin) * ex.increment;
+
+  const pct = (performance / maxPerformance) * 100;
+  return Math.min(100, Math.max(0, pct));
 }
 
 // ===== ACTIONS =====
@@ -220,4 +219,3 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
-
