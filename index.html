@@ -8,18 +8,15 @@
   body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
   h1 { text-align: center; margin-bottom: 20px; }
 
-  /* Top form */
   .add-exercise { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
   .add-exercise input { padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 120px; }
   .add-exercise button { padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; }
 
-  /* Exercise card */
   .exercise-card { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .exercise-card h2 { margin-top: 0; }
   .fields { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .fields input { width: 100px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
 
-  /* Progress */
   .progress-container { width: 100%; background: #eee; border-radius: 5px; height: 20px; margin-bottom: 5px; }
   .progress-bar { height: 100%; background: #4caf50; border-radius: 5px 0 0 5px; width: 0%; transition: width 0.2s; }
 </style>
@@ -47,20 +44,27 @@
 <script>
 let exercises = [];
 
-// --- Helper Functions ---
-function calculateRepPoints(sets, repRange) {
-  return sets.reduce((acc, reps) => acc + (reps - repRange.min), 0);
-}
-
+// --- New smooth continuous progress calculation ---
 function calculateProgress(ex) {
   const { startWeight, currentWeight, goalWeight, repRange, weightIncrement, sets } = ex;
-  const maxRepPoints = (repRange.max - repRange.min) * 3;
-  const repPoints = calculateRepPoints(sets, repRange);
-  const weightIncrements = Math.floor((currentWeight - startWeight) / weightIncrement);
-  const weightPoints = weightIncrements * 3 * maxRepPoints;
-  const totalWeightIncrements = Math.floor((goalWeight - startWeight) / weightIncrement);
-  const totalPoints = totalWeightIncrements * 3 * maxRepPoints + maxRepPoints;
-  return Math.min(((repPoints + weightPoints) / totalPoints) * 100, 100);
+
+  const repsPerSet = repRange.max - repRange.min;
+  const setsCount = sets.length;
+
+  // Total weight increments from start to goal
+  const totalWeightIncrements = (goalWeight - startWeight) / weightIncrement;
+
+  // Current weight progress in increments (can be fractional)
+  const weightProgress = (currentWeight - startWeight) / weightIncrement;
+
+  // Rep progress as fraction of max reps per set
+  const repPoints = sets.reduce((acc, reps) => acc + (reps - repRange.min) / repsPerSet, 0);
+
+  // Combine weight and rep progress continuously
+  const totalUnits = totalWeightIncrements + setsCount; // each weight increment + each set
+  const completedUnits = Math.min(weightProgress + repPoints, totalUnits);
+
+  return Math.min((completedUnits / totalUnits) * 100, 100);
 }
 
 // --- Create Exercise Card ---
@@ -72,7 +76,6 @@ function createExerciseCard(ex) {
   title.textContent = ex.name;
   card.appendChild(title);
 
-  // Editable fields
   const fieldsDiv = document.createElement('div');
   fieldsDiv.className = 'fields';
   const fieldMap = [
@@ -88,7 +91,7 @@ function createExerciseCard(ex) {
     { label: 'Set 3', key: 'set3' }
   ];
 
-  const inputMap = {}; // store references to inputs to update progress dynamically
+  const inputMap = {};
 
   fieldMap.forEach(f => {
     const input = document.createElement('input');
@@ -113,6 +116,7 @@ function createExerciseCard(ex) {
       } else {
         ex[f.key] = parseFloat(input.value) || 0;
       }
+      // Update progress bar
       progressBar.style.width = calculateProgress(ex) + '%';
       progressText.textContent = calculateProgress(ex).toFixed(1) + '%';
     };
