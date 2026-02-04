@@ -44,26 +44,34 @@
 <script>
 let exercises = [];
 
-// --- New smooth continuous progress calculation ---
+// --- Correct stepwise progress calculation ---
 function calculateProgress(ex) {
   const { startWeight, currentWeight, goalWeight, repRange, weightIncrement, sets } = ex;
 
-  const repsPerSet = repRange.max - repRange.min;
   const setsCount = sets.length;
+  const repMin = repRange.min;
+  const repMax = repRange.max;
 
-  // Total weight increments from start to goal
-  const totalWeightIncrements = (goalWeight - startWeight) / weightIncrement;
+  // Max rep units per weight
+  const maxRepUnitsPerWeight = (repMax - repMin) * setsCount;
 
-  // Current weight progress in increments (can be fractional)
-  const weightProgress = (currentWeight - startWeight) / weightIncrement;
+  // Total weight increments to reach goal
+  const totalWeightIncrements = Math.floor((goalWeight - startWeight) / weightIncrement);
 
-  // Rep progress as fraction of max reps per set
-  const repPoints = sets.reduce((acc, reps) => acc + (reps - repRange.min) / repsPerSet, 0);
+  // Units from current reps at current weight
+  const currentRepUnits = sets.reduce((acc, reps) => acc + (reps - repMin), 0);
 
-  // Combine weight and rep progress continuously
-  const totalUnits = totalWeightIncrements + setsCount; // each weight increment + each set
-  const completedUnits = Math.min(weightProgress + repPoints, totalUnits);
+  // Units from completed weight increments (all sets must have reached rep goal at previous weights)
+  const weightIncrementsAchieved = Math.floor((currentWeight - startWeight) / weightIncrement);
+  const weightUnits = weightIncrementsAchieved * maxRepUnitsPerWeight * 3; // weight increment worth 3×
 
+  // Total units to reach goal
+  const totalUnits = (totalWeightIncrements * maxRepUnitsPerWeight * 3) + maxRepUnitsPerWeight;
+
+  // Total units achieved
+  const completedUnits = weightUnits + currentRepUnits;
+
+  // Progress %
   return Math.min((completedUnits / totalUnits) * 100, 100);
 }
 
@@ -91,8 +99,6 @@ function createExerciseCard(ex) {
     { label: 'Set 3', key: 'set3' }
   ];
 
-  const inputMap = {};
-
   fieldMap.forEach(f => {
     const input = document.createElement('input');
     if(f.key.startsWith('set')) {
@@ -105,6 +111,7 @@ function createExerciseCard(ex) {
       input.value = ex[f.key];
     }
     input.placeholder = f.label;
+
     input.oninput = () => {
       if(f.key.startsWith('set')) {
         ex.sets[parseInt(f.key[3])-1] = parseInt(input.value) || ex.repRange.min;
@@ -116,16 +123,15 @@ function createExerciseCard(ex) {
       } else {
         ex[f.key] = parseFloat(input.value) || 0;
       }
-      // Update progress bar
       progressBar.style.width = calculateProgress(ex) + '%';
       progressText.textContent = calculateProgress(ex).toFixed(1) + '%';
     };
+
     fieldsDiv.appendChild(input);
-    inputMap[f.key] = input;
   });
+
   card.appendChild(fieldsDiv);
 
-  // Progress bar
   const progressContainer = document.createElement('div');
   progressContainer.className = 'progress-container';
   const progressBar = document.createElement('div');
@@ -184,4 +190,3 @@ function addExercise() {
 
 </body>
 </html>
-
