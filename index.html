@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IronTracker</title>
+    <style>
+        :root { --bg: #000; --card: #121212; --accent: #00ff88; --text: #fff; --panel: #1a1a1a; --danger: #ff5555; --bf-accent: #8855ff; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-top: 160px; -webkit-tap-highlight-color: transparent; }
+        
+        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 30px; }
+        .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
+        
+        #header { position: fixed; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); padding: 20px; z-index: 1000; border-bottom: 1px solid #222; }
+        .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
+        .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
+        
+        .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .lift-name { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin: 0; }
+        .weight-display { font-size: 0.85rem; color: #888; margin-top: 4px; font-weight: 500; }
+        
+        .pct-label { font-size: 0.9rem; font-weight: 800; color: #fff; text-align: right; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .set-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; margin-top: 10px; }
+        .rep-in { background: #222; border: 1px solid #333; color: #fff; width: 55px; height: 55px; text-align: center; border-radius: 10px; font-size: 1.3rem; font-weight: bold; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .modal label { font-size: 0.7rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .modal input, .auth-card input { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
+        
+        .btn { border: none; border-radius: 10px; font-weight: bold; cursor: pointer; padding: 14px; }
+        .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 20px; }
+        .btn-cancel { background: #333; color: #fff; width: 100%; margin-top: 10px; }
+        .btn-delete { background: transparent; color: #ff5555; width: 100%; margin-top: 30px; border: 1px solid #422; padding: 8px; font-size: 0.8rem; }
+        
+        .add-set-btn, .rem-set-btn { background: #1a1a1a; border: 1px solid #333; width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .add-set-btn { color: var(--accent); }
+        .rem-set-btn { color: var(--danger); }
+    </style>
+</head>
+<body>
+
+<div id="auth-screen">
+    <div class="auth-card">
+        <h2 style="color: var(--accent); margin-top: 0;">IronTracker</h2>
+        <input type="email" id="auth-email" placeholder="Email">
+        <input type="password" id="auth-pass" placeholder="Password">
+        <button class="btn btn-primary" id="btn-login">LOGIN / SIGNUP</button>
+        <p id="auth-error" style="color: var(--danger); font-size: 0.75rem; margin-top: 15px;"></p>
+    </div>
+</div>
+
+<div id="header">
+    <div style="display:flex; justify-content:space-between; align-items: flex-end; margin-bottom: 5px;">
+        <strong style="font-size: 0.75rem; color: #666; letter-spacing: 1px;">BODY FAT %</strong>
+        <span id="bf-text" onclick="window.openBodyModal()" style="color:var(--bf-accent); font-weight:bold; font-size: 1.5rem; cursor: pointer;">--%</span>
+    </div>
+    <div class="bar-bg"><div id="bf-bar" class="bar-fill" style="background: var(--bf-accent);"></div></div>
+    <div style="display:flex; justify-content:space-between; align-items: flex-end; margin-top: 10px; margin-bottom: 5px;">
+        <strong style="font-size: 0.75rem; color: #666; letter-spacing: 1px;">TOTAL PROGRESS</strong>
+        <span id="ov-text" style="color:var(--accent); font-weight:bold; font-size: 1.5rem;">0%</span>
+    </div>
+    <div class="bar-bg"><div id="ov-bar" class="bar-fill"></div></div>
+</div>
+
+<div id="list"></div>
+<button class="btn btn-primary" onclick="window.addLift()" style="background: #111; color: var(--accent); border: 1px solid #333; margin-top: 10px; margin-bottom: 40px;">+ ADD EXERCISE</button>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-top:0; color: var(--accent);">Settings</h3>
+        <label>Exercise Name</label><input type="text" id="editName">
+        <div class="modal-grid">
+            <div><label>Start Wt</label><input type="number" id="editStart"></div>
+            <div><label>Goal Wt</label><input type="number" id="editGoal"></div>
+            <div><label>Current Wt</label><input type="number" id="editCurr"></div>
+            <div><label>Increment</label><input type="number" id="editInc"></div>
+            <div><label>Min Reps</label><input type="number" id="editMin"></div>
+            <div><label>Max Reps</label><input type="number" id="editMax"></div>
+        </div>
+        <button class="btn btn-primary" onclick="window.saveEdit()">SAVE</button>
+        <button class="btn btn-cancel" onclick="window.closeModal()">CANCEL</button>
+        <button class="btn btn-delete" onclick="window.deleteCurrent()">DELETE EXERCISE</button>
+    </div>
+</div>
+
+<div id="bodyModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color: var(--bf-accent);">Body Stats</h3>
+        <div class="modal-grid">
+            <div><label>Start Wt</label><input type="number" id="bStartWt"></div>
+            <div><label>Start BF%</label><input type="number" id="bStartBF"></div>
+            <div><label>Current Wt</label><input type="number" id="bCurrWt"></div>
+            <div><label>Goal BF%</label><input type="number" id="bGoalBF"></div>
+        </div>
+        <button class="btn btn-primary" style="background: var(--bf-accent); color: white;" onclick="window.saveBodyStats()">SAVE STATS</button>
+        <button class="btn btn-cancel" onclick="document.getElementById('bodyModal').style.display='none'">CANCEL</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCUfwadJW5lLE5jeYontMOGgEAFU4mvlmI",
+  authDomain: "shaper-8d18e.firebaseapp.com",
+  projectId: "shaper-8d18e",
+  storageBucket: "shaper-8d18e.firebasestorage.app",
+  messagingSenderId: "673452956971",
+  appId: "1:673452956971:web:cb1cb6c19f04cd8812f96e",
+  measurementId: "G-W20JW62XX6"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.lifts = [];
+    window.stats = { sWt: 0, sBF: 0, cWt: 0, gBF: 15 };
+    let currentUser = null;
+    let currentEditIdx = null;
+
+    document.getElementById('btn-login').onclick = async () => {
+        const email = document.getElementById('auth-email').value;
+        const pass = document.getElementById('auth-pass').value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+        } catch (e) {
+            try {
+                await createUserWithEmailAndPassword(auth, email, pass);
+            } catch (e2) { document.getElementById('auth-error').innerText = e2.message; }
+        }
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('auth-screen').style.display = 'none';
+            onSnapshot(doc(db, "users", user.uid), (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    window.lifts = data.lifts || [];
+                    window.stats = data.stats || { sWt: 0, sBF: 0, cWt: 0, gBF: 15 };
+                    render();
+                }
+            });
+        } else {
+            document.getElementById('auth-screen').style.display = 'flex';
+        }
+    });
+
+    window.saveToCloud = async () => {
+        if (!currentUser) return;
+        await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
+    };
+
+    window.openBodyModal = () => {
+        document.getElementById('bStartWt').value = window.stats.sWt;
+        document.getElementById('bStartBF').value = window.stats.sBF;
+        document.getElementById('bCurrWt').value = window.stats.cWt;
+        document.getElementById('bGoalBF').value = window.stats.gBF;
+        document.getElementById('bodyModal').style.display = 'flex';
+    };
+
+    window.saveBodyStats = () => {
+        window.stats.sWt = parseFloat(document.getElementById('bStartWt').value) || 0;
+        window.stats.sBF = parseFloat(document.getElementById('bStartBF').value) || 0;
+        window.stats.cWt = parseFloat(document.getElementById('bCurrWt').value) || 0;
+        window.stats.gBF = parseFloat(document.getElementById('bGoalBF').value) || 0;
+        window.saveToCloud();
+        document.getElementById('bodyModal').style.display = 'none';
+    };
+
+    window.addLift = () => {
+        window.lifts.push({ name: "New Exercise", start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
+        window.openModal(window.lifts.length - 1);
+    };
+
+    window.openModal = (i) => {
+        currentEditIdx = i;
+        const l = window.lifts[i];
+        document.getElementById('editName').value = l.name;
+        document.getElementById('editStart').value = l.start;
+        document.getElementById('editGoal').value = l.goal;
+        document.getElementById('editCurr').value = l.curr;
+        document.getElementById('editInc').value = l.inc;
+        document.getElementById('editMin').value = l.minR;
+        document.getElementById('editMax').value = l.maxR;
+        document.getElementById('editModal').style.display = 'flex';
+    };
+
+    window.closeModal = () => {
+        document.getElementById('editModal').style.display = 'none';
+        render();
+    };
+
+    window.saveEdit = () => {
+        const i = currentEditIdx;
+        window.lifts[i].name = document.getElementById('editName').value;
+        window.lifts[i].start = parseFloat(document.getElementById('editStart').value) || 0;
+        window.lifts[i].goal = parseFloat(document.getElementById('editGoal').value) || 0;
+        window.lifts[i].curr = parseFloat(document.getElementById('editCurr').value) || 0;
+        window.lifts[i].inc = parseFloat(document.getElementById('editInc').value) || 0;
+        window.lifts[i].minR = parseInt(document.getElementById('editMin').value) || 0;
+        window.lifts[i].maxR = parseInt(document.getElementById('editMax').value) || 0;
+        window.saveToCloud();
+        window.closeModal();
+    };
+
+    window.deleteCurrent = () => {
+        if(confirm("Delete this lift?")) {
+            window.lifts.splice(currentEditIdx, 1);
+            window.saveToCloud();
+            window.closeModal();
+        }
+    };
+
+    window.handleRepChange = (i, si, val) => {
+        window.lifts[i].sets[si] = parseInt(val) || 0;
+        window.saveToCloud();
+    };
+
+    window.addSet = (i) => {
+        window.lifts[i].sets.push(window.lifts[i].minR);
+        window.saveToCloud();
+    };
+
+    window.removeSet = (i) => {
+        if (window.lifts[i].sets.length > 1) {
+            window.lifts[i].sets.pop();
+            window.saveToCloud();
+        }
+    };
+
+    function calculate(l) {
+        if (l.goal <= l.start || l.inc <= 0) return { earned: 0, max: 0 };
+        const ptsPerLevel = (l.maxR - l.minR) * l.sets.length;
+        const totalSteps = (l.goal - l.start) / l.inc;
+        const maxPoints = (totalSteps * ptsPerLevel) + ptsPerLevel;
+        const weightPoints = ((l.curr - l.start) / l.inc) * ptsPerLevel;
+        const repPoints = l.sets.reduce((sum, r) => sum + Math.max(0, Math.min(r - l.minR, l.maxR - l.minR)), 0);
+        return { earned: weightPoints + repPoints, max: maxPoints };
+    }
+
+    function render() {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        let totalPctSum = 0;
+        window.lifts.forEach((l, i) => {
+            const res = calculate(l);
+            const pct = res.max > 0 ? Math.min((res.earned / res.max * 100), 100) : 0;
+            totalPctSum += pct;
+            list.innerHTML += `
+                <div class="card">
+                    <div class="card-header">
+                        <div><h2 class="lift-name">${l.name}</h2><div class="weight-display">${l.curr} kg · ${l.minR}-${l.maxR} reps</div></div>
+                        <button class="menu-btn" onclick="window.openModal(${i})">⋮</button>
+                    </div>
+                    <div class="set-container">
+                        ${l.sets.map((r, si) => `<input type="number" inputmode="numeric" class="rep-in" value="${r}" oninput="window.handleRepChange(${i}, ${si}, this.value)">`).join('')}
+                        <button class="add-set-btn" onclick="window.addSet(${i})">+</button>
+                        <button class="rem-set-btn" onclick="window.removeSet(${i})">−</button>
+                    </div>
+                    <div class="pct-label">${pct.toFixed(1)}%</div>
+                    <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+                </div>`;
+        });
+
+        const overall = window.lifts.length > 0 ? (totalPctSum / window.lifts.length).toFixed(1) : 0;
+        document.getElementById('ov-text').innerText = overall + '%';
+        document.getElementById('ov-bar').style.width = overall + '%';
+
+        if (window.stats.sWt > 0 && window.stats.sBF > 0 && window.stats.cWt > 0) {
+            const leanMass = window.stats.sWt * (1 - (window.stats.sBF / 100));
+            const currentBF = ((window.stats.cWt - leanMass) / window.stats.cWt) * 100;
+            let progress = ((window.stats.sBF - currentBF) / (window.stats.sBF - window.stats.gBF)) * 100;
+            document.getElementById('bf-text').innerText = currentBF.toFixed(1) + '%';
+            document.getElementById('bf-bar').style.width = Math.max(0, Math.min(100, progress)) + '%';
+        }
+    }
+</script>
+</body>
+</html>
