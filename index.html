@@ -264,7 +264,7 @@ const firebaseConfig = {
                         <button class="menu-btn" onclick="window.openModal(${i})">⋮</button>
                     </div>
                     <div class="set-container">
-                        ${l.sets.map((r, si) => `<input type="number" inputmode="numeric" class="rep-in" value="${r}" oninput="window.handleRepChange(${i}, ${si}, this.value)">`).join('')}
+                        ${l.sets.map((r, si) => `<input type="number" inputmode="numeric" class="rep-in" value="${r}" onchange="window.handleRepChange(${i}, ${si}, this.value)">`).join('')}
                         <button class="add-set-btn" onclick="window.addSet(${i})">+</button>
                         <button class="rem-set-btn" onclick="window.removeSet(${i})">−</button>
                     </div>
