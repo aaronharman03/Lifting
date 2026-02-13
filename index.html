@@ -18,6 +18,7 @@
         .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
         .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
         
+        /* Section Dividers */
         .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; }
         .group-divider h2 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
 
@@ -82,10 +83,10 @@
         <div class="modal-grid" style="grid-template-columns: 2fr 1fr; margin-top:0;">
             <div>
                 <label>Workout Name</label>
-                <input type="text" id="editGroup" placeholder="e.g. Pull Day">
+                <input type="text" id="editGroup" placeholder="e.g. Push Day">
             </div>
             <div>
-                <label>Order (Pos)</label>
+                <label>Pos</label>
                 <input type="number" id="editOrder" placeholder="1">
             </div>
         </div>
@@ -176,7 +177,7 @@
 
     window.saveToCloud = async () => {
         if (!currentUser) return;
-        // Automatically sort before saving
+        // Always sort the array globally by Position number before saving
         window.lifts.sort((a, b) => (a.order || 99) - (b.order || 99));
         await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
     };
@@ -199,7 +200,7 @@
     };
 
     window.addLift = () => {
-        window.lifts.push({ name: "New Exercise", group: "General", order: window.lifts.length + 1, start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
+        window.lifts.push({ name: "New Exercise", group: "My Workout", order: window.lifts.length + 1, start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
         window.openModal(window.lifts.length - 1);
     };
 
@@ -278,15 +279,17 @@
         list.innerHTML = '';
         let totalPctSum = 0;
 
-        // Sort lifts by order value before grouping
+        // Step 1: Sort by Position number first
         const sortedLifts = [...window.lifts].sort((a, b) => (a.order || 99) - (b.order || 99));
 
+        // Step 2: Determine groups based on the sorted list
         const uniqueGroups = [];
         sortedLifts.forEach(l => {
             const g = l.group || "General";
             if (!uniqueGroups.includes(g)) uniqueGroups.push(g);
         });
         
+        // Step 3: Render each group and its sorted exercises
         uniqueGroups.forEach(groupName => {
             const groupLifts = sortedLifts.filter(l => (l.group || "General") === groupName);
             if (groupLifts.length === 0) return;
