@@ -19,12 +19,15 @@
         .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
         .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
         
+        /* Section Dividers */
+        .group-divider { margin: 30px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; display: flex; align-items: center; }
+        .group-divider h2 { margin: 0; font-size: 1rem; letter-spacing: 2px; color: #888; text-transform: uppercase; }
+
         .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
         .lift-name { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin: 0; }
         .weight-display { font-size: 0.85rem; color: #888; margin-top: 4px; font-weight: 500; }
         
-        /* Drag Styles */
         .drag-handle { cursor: grab; color: #444; font-size: 1.4rem; padding-right: 10px; padding-top: 2px; }
         .sortable-ghost { opacity: 0.3; background: #222; border: 1px dashed var(--accent); }
         
@@ -33,10 +36,10 @@
         .rep-in { background: #222; border: 1px solid #333; color: #fff; width: 55px; height: 55px; text-align: center; border-radius: 10px; font-size: 1.3rem; font-weight: bold; }
         
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; }
+        .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; overflow-y: auto; max-height: 90vh; }
         .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         .modal label { font-size: 0.7rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
-        .modal input, .auth-card input { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
+        .modal input, .modal select, .auth-card input { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
         
         .btn { border: none; border-radius: 10px; font-weight: bold; cursor: pointer; padding: 14px; }
         .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 20px; }
@@ -80,6 +83,13 @@
 <div id="editModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle" style="margin-top:0; color: var(--accent);">Settings</h3>
+        <label>Workout Group</label>
+        <select id="editGroup">
+            <option value="Workout A">Workout A</option>
+            <option value="Workout B">Workout B</option>
+            <option value="Workout C">Workout C</option>
+            <option value="Workout D">Workout D</option>
+        </select>
         <label>Exercise Name</label><input type="text" id="editName">
         <div class="modal-grid">
             <div><label>Start Wt</label><input type="number" id="editStart"></div>
@@ -164,6 +174,7 @@
 
     window.saveToCloud = async () => {
         if (!currentUser) return;
+        // Sort by group first, then keep the internal order
         await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
     };
 
@@ -185,7 +196,7 @@
     };
 
     window.addLift = () => {
-        window.lifts.push({ name: "New Exercise", start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
+        window.lifts.push({ name: "New Exercise", group: "Workout A", start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
         window.openModal(window.lifts.length - 1);
     };
 
@@ -193,6 +204,7 @@
         currentEditIdx = i;
         const l = window.lifts[i];
         document.getElementById('editName').value = l.name;
+        document.getElementById('editGroup').value = l.group || "Workout A";
         document.getElementById('editStart').value = l.start;
         document.getElementById('editGoal').value = l.goal;
         document.getElementById('editCurr').value = l.curr;
@@ -210,6 +222,7 @@
     window.saveEdit = () => {
         const i = currentEditIdx;
         window.lifts[i].name = document.getElementById('editName').value;
+        window.lifts[i].group = document.getElementById('editGroup').value;
         window.lifts[i].start = parseFloat(document.getElementById('editStart').value) || 0;
         window.lifts[i].goal = parseFloat(document.getElementById('editGoal').value) || 0;
         window.lifts[i].curr = parseFloat(document.getElementById('editCurr').value) || 0;
@@ -259,30 +272,69 @@
         const list = document.getElementById('list');
         list.innerHTML = '';
         let totalPctSum = 0;
-        window.lifts.forEach((l, i) => {
-            const res = calculate(l);
-            const pct = res.max > 0 ? Math.min((res.earned / res.max * 100), 100) : 0;
-            totalPctSum += pct;
-            list.innerHTML += `
-                <div class="card" data-id="${i}">
-                    <div class="card-header">
-                        <div style="display:flex; align-items:flex-start;">
-                            <div class="drag-handle">⠿</div>
-                            <div>
-                                <h2 class="lift-name">${l.name}</h2>
-                                <div class="weight-display">${l.curr} kg · ${l.minR}-${l.maxR} reps</div>
+
+        // Group the lifts
+        const groups = ["Workout A", "Workout B", "Workout C", "Workout D"];
+        
+        groups.forEach(groupName => {
+            const groupLifts = window.lifts.filter(l => (l.group || "Workout A") === groupName);
+            if (groupLifts.length === 0) return;
+
+            // Add Divider
+            list.innerHTML += `<div class="group-divider"><h2>${groupName}</h2></div>`;
+            
+            // Create a sub-container for this group to allow sorting within the group
+            const groupContainerId = `group-${groupName.replace(/\s+/g, '')}`;
+            const groupContainer = document.createElement('div');
+            groupContainer.id = groupContainerId;
+            list.appendChild(groupContainer);
+
+            groupLifts.forEach((l) => {
+                const globalIdx = window.lifts.indexOf(l);
+                const res = calculate(l);
+                const pct = res.max > 0 ? Math.min((res.earned / res.max * 100), 100) : 0;
+                totalPctSum += pct;
+                
+                groupContainer.innerHTML += `
+                    <div class="card" data-id="${globalIdx}">
+                        <div class="card-header">
+                            <div style="display:flex; align-items:flex-start;">
+                                <div class="drag-handle">⠿</div>
+                                <div>
+                                    <h2 class="lift-name">${l.name}</h2>
+                                    <div class="weight-display">${l.curr} kg · ${l.minR}-${l.maxR} reps</div>
+                                </div>
                             </div>
+                            <button class="menu-btn" onclick="window.openModal(${globalIdx})">⋮</button>
                         </div>
-                        <button class="menu-btn" onclick="window.openModal(${i})">⋮</button>
-                    </div>
-                    <div class="set-container">
-                        ${l.sets.map((r, si) => `<input type="number" inputmode="numeric" class="rep-in" value="${r}" onchange="window.handleRepChange(${i}, ${si}, this.value)">`).join('')}
-                        <button class="add-set-btn" onclick="window.addSet(${i})">+</button>
-                        <button class="rem-set-btn" onclick="window.removeSet(${i})">−</button>
-                    </div>
-                    <div class="pct-label">${pct.toFixed(1)}%</div>
-                    <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
-                </div>`;
+                        <div class="set-container">
+                            ${l.sets.map((r, si) => `<input type="number" inputmode="numeric" class="rep-in" value="${r}" onchange="window.handleRepChange(${globalIdx}, ${si}, this.value)">`).join('')}
+                            <button class="add-set-btn" onclick="window.addSet(${globalIdx})">+</button>
+                            <button class="rem-set-btn" onclick="window.removeSet(${globalIdx})">−</button>
+                        </div>
+                        <div class="pct-label">${pct.toFixed(1)}%</div>
+                        <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+                    </div>`;
+            });
+
+            // Initialize Sortable for THIS group only
+            Sortable.create(groupContainer, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function () {
+                    // When an item is moved within a group, we reconstruct the main array
+                    const newLifts = [];
+                    // This is a simple way to maintain order: 
+                    // Grabs all cards from the UI in their new visual order and maps them back to the array
+                    document.querySelectorAll('.card').forEach(card => {
+                        const id = card.getAttribute('data-id');
+                        newLifts.push(window.lifts[id]);
+                    });
+                    window.lifts = newLifts;
+                    window.saveToCloud();
+                }
+            });
         });
 
         const overall = window.lifts.length > 0 ? (totalPctSum / window.lifts.length).toFixed(1) : 0;
@@ -296,25 +348,6 @@
             document.getElementById('bf-text').innerText = currentBF.toFixed(1) + '%';
             document.getElementById('bf-bar').style.width = Math.max(0, Math.min(100, progress)) + '%';
         }
-
-        // Initialize Sorting
-        Sortable.create(list, {
-            handle: '.drag-handle', // Only allows dragging via the handle icon
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: function (evt) {
-                const oldIdx = evt.oldIndex;
-                const newIdx = evt.newIndex;
-                if (oldIdx === newIdx) return;
-                
-                // Move in array
-                const movedItem = window.lifts.splice(oldIdx, 1)[0];
-                window.lifts.splice(newIdx, 0, movedItem);
-                
-                // Save to cloud
-                window.saveToCloud();
-            }
-        });
     }
 </script>
 </body>
