@@ -7,7 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://github.com/aaronharman03/Strength/blob/main/icon-192.png?raw=true">
     <link rel="apple-touch-icon" href="https://github.com/aaronharman03/Strength/blob/main/icon-192.png?raw=true">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root { --bg: #000; --card: #121212; --accent: #00ff88; --text: #fff; --panel: #1a1a1a; --danger: #ff5555; --bf-accent: #8855ff; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-top: 160px; -webkit-tap-highlight-color: transparent; }
@@ -19,17 +18,13 @@
         .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
         .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
         
-        /* Section Dividers */
-        .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; display: flex; align-items: center; }
+        .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; }
         .group-divider h2 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
 
         .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
         .lift-name { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
         .weight-display { font-size: 0.85rem; color: #888; margin-top: 4px; font-weight: 500; }
-        
-        .drag-handle { cursor: grab; color: #444; font-size: 1.4rem; padding-right: 15px; }
-        .sortable-ghost { opacity: 0.3; background: #222; border: 1px dashed var(--accent); }
         
         .pct-label { font-size: 0.9rem; font-weight: 800; color: #fff; text-align: right; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .set-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; margin-top: 10px; }
@@ -82,11 +77,22 @@
 
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3 id="modalTitle" style="margin-top:0; color: var(--accent);">Settings</h3>
-        <label>Workout Name (e.g. Pull Day)</label>
-        <input type="text" id="editGroup" placeholder="General">
+        <h3 id="modalTitle" style="margin-top:0; color: var(--accent);">Exercise Settings</h3>
+        
+        <div class="modal-grid" style="grid-template-columns: 2fr 1fr; margin-top:0;">
+            <div>
+                <label>Workout Name</label>
+                <input type="text" id="editGroup" placeholder="e.g. Pull Day">
+            </div>
+            <div>
+                <label>Order (Pos)</label>
+                <input type="number" id="editOrder" placeholder="1">
+            </div>
+        </div>
+
         <label>Exercise Name</label>
         <input type="text" id="editName">
+
         <div class="modal-grid">
             <div><label>Start Wt</label><input type="number" id="editStart"></div>
             <div><label>Goal Wt</label><input type="number" id="editGoal"></div>
@@ -170,6 +176,8 @@
 
     window.saveToCloud = async () => {
         if (!currentUser) return;
+        // Automatically sort before saving
+        window.lifts.sort((a, b) => (a.order || 99) - (b.order || 99));
         await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
     };
 
@@ -191,7 +199,7 @@
     };
 
     window.addLift = () => {
-        window.lifts.push({ name: "New Exercise", group: "My Workout", start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
+        window.lifts.push({ name: "New Exercise", group: "General", order: window.lifts.length + 1, start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8] });
         window.openModal(window.lifts.length - 1);
     };
 
@@ -200,6 +208,7 @@
         const l = window.lifts[i];
         document.getElementById('editName').value = l.name;
         document.getElementById('editGroup').value = l.group || "General";
+        document.getElementById('editOrder').value = l.order || (i + 1);
         document.getElementById('editStart').value = l.start;
         document.getElementById('editGoal').value = l.goal;
         document.getElementById('editCurr').value = l.curr;
@@ -218,6 +227,7 @@
         const i = currentEditIdx;
         window.lifts[i].name = document.getElementById('editName').value;
         window.lifts[i].group = document.getElementById('editGroup').value || "General";
+        window.lifts[i].order = parseInt(document.getElementById('editOrder').value) || 99;
         window.lifts[i].start = parseFloat(document.getElementById('editStart').value) || 0;
         window.lifts[i].goal = parseFloat(document.getElementById('editGoal').value) || 0;
         window.lifts[i].curr = parseFloat(document.getElementById('editCurr').value) || 0;
@@ -268,40 +278,33 @@
         list.innerHTML = '';
         let totalPctSum = 0;
 
-        // 1. Get unique group names in the order they appear in the data
+        // Sort lifts by order value before grouping
+        const sortedLifts = [...window.lifts].sort((a, b) => (a.order || 99) - (b.order || 99));
+
         const uniqueGroups = [];
-        window.lifts.forEach(l => {
+        sortedLifts.forEach(l => {
             const g = l.group || "General";
             if (!uniqueGroups.includes(g)) uniqueGroups.push(g);
         });
         
-        // 2. Render each group
         uniqueGroups.forEach(groupName => {
-            const groupLifts = window.lifts.filter(l => (l.group || "General") === groupName);
+            const groupLifts = sortedLifts.filter(l => (l.group || "General") === groupName);
             if (groupLifts.length === 0) return;
 
             list.innerHTML += `<div class="group-divider"><h2>${groupName}</h2></div>`;
             
-            const groupContainerId = `group-${groupName.replace(/[^a-z0-9]/gi, '')}`;
-            const groupContainer = document.createElement('div');
-            groupContainer.id = groupContainerId;
-            list.appendChild(groupContainer);
-
             groupLifts.forEach((l) => {
                 const globalIdx = window.lifts.indexOf(l);
                 const res = calculate(l);
                 const pct = res.max > 0 ? Math.min((res.earned / res.max * 100), 100) : 0;
                 totalPctSum += pct;
                 
-                groupContainer.innerHTML += `
-                    <div class="card" data-id="${globalIdx}">
+                list.innerHTML += `
+                    <div class="card">
                         <div class="card-header">
-                            <div style="display:flex; align-items:flex-start;">
-                                <div class="drag-handle">⠿</div>
-                                <div>
-                                    <h2 class="lift-name">${l.name}</h2>
-                                    <div class="weight-display">${l.curr} kg · ${l.minR}-${l.maxR} reps</div>
-                                </div>
+                            <div>
+                                <h2 class="lift-name">${l.name}</h2>
+                                <div class="weight-display">${l.curr} kg · ${l.minR}-${l.maxR} reps</div>
                             </div>
                             <button class="menu-btn" onclick="window.openModal(${globalIdx})">⋮</button>
                         </div>
@@ -313,22 +316,6 @@
                         <div class="pct-label">${pct.toFixed(1)}%</div>
                         <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
                     </div>`;
-            });
-
-            Sortable.create(groupContainer, {
-                handle: '.drag-handle',
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onEnd: function () {
-                    const newLifts = [];
-                    // This finds all cards currently on screen and re-orders the master list to match
-                    document.querySelectorAll('.card').forEach(card => {
-                        const id = card.getAttribute('data-id');
-                        newLifts.push(window.lifts[id]);
-                    });
-                    window.lifts = newLifts;
-                    window.saveToCloud();
-                }
             });
         });
 
