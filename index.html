@@ -19,8 +19,9 @@
         .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
         
         /* Section Dividers */
-        .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; }
+        .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .group-divider h2 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+        .fold-icon { color: var(--accent); font-size: 0.8rem; margin-right: 10px; opacity: 0.7; }
 
         .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
@@ -143,6 +144,7 @@
 
     window.lifts = [];
     window.stats = { sWt: 0, sBF: 0, cWt: 0, gBF: 15 };
+    window.collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups')) || {};
     let currentUser = null;
     let currentEditIdx = null;
 
@@ -177,9 +179,14 @@
 
     window.saveToCloud = async () => {
         if (!currentUser) return;
-        // Always sort the array globally by Position number before saving
         window.lifts.sort((a, b) => (a.order || 99) - (b.order || 99));
         await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
+    };
+
+    window.toggleGroup = (groupName) => {
+        window.collapsedGroups[groupName] = !window.collapsedGroups[groupName];
+        localStorage.setItem('collapsedGroups', JSON.stringify(window.collapsedGroups));
+        render();
     };
 
     window.openBodyModal = () => {
@@ -279,30 +286,41 @@
         list.innerHTML = '';
         let totalPctSum = 0;
 
-        // Step 1: Sort by Position number first
         const sortedLifts = [...window.lifts].sort((a, b) => (a.order || 99) - (b.order || 99));
 
-        // Step 2: Determine groups based on the sorted list
         const uniqueGroups = [];
         sortedLifts.forEach(l => {
             const g = l.group || "General";
             if (!uniqueGroups.includes(g)) uniqueGroups.push(g);
         });
         
-        // Step 3: Render each group and its sorted exercises
         uniqueGroups.forEach(groupName => {
             const groupLifts = sortedLifts.filter(l => (l.group || "General") === groupName);
             if (groupLifts.length === 0) return;
 
-            list.innerHTML += `<div class="group-divider"><h2>${groupName}</h2></div>`;
+            const isCollapsed = window.collapsedGroups[groupName] || false;
             
+            // Group Header with Toggle
+            let groupSection = document.createElement('div');
+            groupSection.innerHTML = `
+                <div class="group-divider" onclick="window.toggleGroup('${groupName}')">
+                    <h2>${groupName}</h2>
+                    <span class="fold-icon">${isCollapsed ? '展开 ▶' : '折叠 ▼'}</span>
+                </div>
+            `;
+            list.appendChild(groupSection);
+
+            // Container for exercises in this group
+            const groupContainer = document.createElement('div');
+            if (isCollapsed) groupContainer.style.display = 'none';
+
             groupLifts.forEach((l) => {
                 const globalIdx = window.lifts.indexOf(l);
                 const res = calculate(l);
                 const pct = res.max > 0 ? Math.min((res.earned / res.max * 100), 100) : 0;
                 totalPctSum += pct;
                 
-                list.innerHTML += `
+                groupContainer.innerHTML += `
                     <div class="card">
                         <div class="card-header">
                             <div>
@@ -320,6 +338,7 @@
                         <div class="bar-bg"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
                     </div>`;
             });
+            list.appendChild(groupContainer);
         });
 
         const overall = window.lifts.length > 0 ? (totalPctSum / window.lifts.length).toFixed(1) : 0;
@@ -337,3 +356,4 @@
 </script>
 </body>
 </html>
+
