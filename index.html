@@ -179,6 +179,7 @@
 
     window.saveToCloud = async () => {
         if (!currentUser) return;
+        // Sorting here ensures the cloud database stays clean
         window.lifts.sort((a, b) => (a.order || 99) - (b.order || 99));
         await setDoc(doc(db, "users", currentUser.uid), { lifts: window.lifts, stats: window.stats });
     };
@@ -286,13 +287,20 @@
         list.innerHTML = '';
         let totalPctSum = 0;
 
+        // 1. Sort all exercises by their individual order
         const sortedLifts = [...window.lifts].sort((a, b) => (a.order || 99) - (b.order || 99));
 
-        const uniqueGroups = [];
+        // 2. Identify unique groups and track the lowest Pos number within each group
+        const groupOrderMap = {};
         sortedLifts.forEach(l => {
             const g = l.group || "General";
-            if (!uniqueGroups.includes(g)) uniqueGroups.push(g);
+            if (groupOrderMap[g] === undefined || l.order < groupOrderMap[g]) {
+                groupOrderMap[g] = l.order;
+            }
         });
+
+        // 3. Sort the workout groups based on their lowest exercise position
+        const uniqueGroups = Object.keys(groupOrderMap).sort((a, b) => groupOrderMap[a] - groupOrderMap[b]);
         
         uniqueGroups.forEach(groupName => {
             const groupLifts = sortedLifts.filter(l => (l.group || "General") === groupName);
@@ -300,7 +308,7 @@
 
             const isCollapsed = window.collapsedGroups[groupName] || false;
             
-            // Group Header with Toggle
+            // Render Group Header
             let groupSection = document.createElement('div');
             groupSection.innerHTML = `
                 <div class="group-divider" onclick="window.toggleGroup('${groupName}')">
@@ -310,7 +318,7 @@
             `;
             list.appendChild(groupSection);
 
-            // Container for exercises in this group
+            // Exercise Container
             const groupContainer = document.createElement('div');
             if (isCollapsed) groupContainer.style.display = 'none';
 
@@ -356,4 +364,3 @@
 </script>
 </body>
 </html>
-
