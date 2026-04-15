@@ -12,41 +12,42 @@
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-top: 160px; -webkit-tap-highlight-color: transparent; }
 
         #auth-screen { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 30px; }
-       .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
+      .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
 
         #header { position: fixed; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); padding: 20px; z-index: 1000; border-bottom: 1px solid #222; }
-       .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
-       .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
+      .bar-bg { background: #222; border-radius: 4px; height: 10px; width: 100%; margin-top: 8px; overflow: hidden; }
+      .bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.4s ease; }
 
         /* Section Dividers */
-       .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-       .group-divider h2 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
-       .fold-icon { color: var(--accent); font-size: 0.8rem; margin-right: 10px; opacity: 0.7; }
+      .group-divider { margin: 35px 0 15px 0; border-left: 4px solid var(--accent); padding-left: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+      .group-divider h2 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+      .fold-icon { color: var(--accent); font-size: 0.8rem; margin-right: 10px; opacity: 0.7; }
 
-       .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
-       .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-       .lift-name { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
-       .weight-display { font-size: 0.85rem; color: #888; margin-top: 4px; font-weight: 500; }
+      .card { background: var(--card); padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #222; position: relative; }
+      .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+      .lift-name { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
+      .weight-display { font-size: 0.85rem; color: #888; margin-top: 4px; font-weight: 500; }
 
-       .pct-label { font-size: 0.9rem; font-weight: 800; color: #fff; text-align: right; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-       .set-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; margin-top: 10px; }
-       .rep-in { background: #222; border: 1px solid #333; color: #fff; width: 55px; height: 55px; text-align: center; border-radius: 10px; font-size: 1.3rem; font-weight: bold; }
+      .pct-label { font-size: 0.9rem; font-weight: 800; color: #fff; text-align: right; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+      .set-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; margin-top: 10px; }
+      .rep-in { background: #222; border: 1px solid #333; color: #fff; width: 55px; height: 55px; text-align: center; border-radius: 10px; font-size: 1.3rem; font-weight: bold; }
 
-       .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
-       .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; overflow-y: auto; max-height: 90vh; }
-       .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-       .modal label { font-size: 0.7rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
-       .modal input,.auth-card input { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
+      .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+      .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; overflow-y: auto; max-height: 90vh; }
+      .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+      .modal label { font-size: 0.7rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
+      .modal input,.auth-card input,.modal textarea { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
+      .modal textarea { font-family: inherit; resize: vertical; }
 
-       .btn { border: none; border-radius: 10px; font-weight: bold; cursor: pointer; padding: 14px; }
-       .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 20px; }
-       .btn-cancel { background: #333; color: #fff; width: 100%; margin-top: 10px; }
-       .btn-delete { background: transparent; color: #ff5555; width: 100%; margin-top: 30px; border: 1px solid #422; padding: 8px; font-size: 0.8rem; }
+      .btn { border: none; border-radius: 10px; font-weight: bold; cursor: pointer; padding: 14px; }
+      .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 20px; }
+      .btn-cancel { background: #333; color: #fff; width: 100%; margin-top: 10px; }
+      .btn-delete { background: transparent; color: #ff5555; width: 100%; margin-top: 30px; border: 1px solid #422; padding: 8px; font-size: 0.8rem; }
 
-       .add-set-btn,.rem-set-btn { background: #1a1a1a; border: 1px solid #333; width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-       .add-set-btn { color: var(--accent); }
-       .rem-set-btn { color: var(--danger); }
-       .menu-btn { background: none; border: none; color: #666; font-size: 1.5rem; cursor: pointer; }
+      .add-set-btn,.rem-set-btn { background: #1a1a1a; border: 1px solid #333; width: 45px; height: 45px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+      .add-set-btn { color: var(--accent); }
+      .rem-set-btn { color: var(--danger); }
+      .menu-btn { background: none; border: none; color: #666; font-size: 1.5rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -103,6 +104,9 @@
             <div><label>Min Reps</label><input type="number" id="editMin"></div>
             <div><label>Max Reps</label><input type="number" id="editMax"></div>
         </div>
+
+        <label>Notes</label>
+        <textarea id="editNotes" rows="3" placeholder="Cues, grip, tempo, etc"></textarea>
 
         <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
             <input type="checkbox" id="editExclude" style="width: 20px; height: 20px; accent-color: var(--accent);">
@@ -214,7 +218,7 @@
     };
 
     window.addLift = () => {
-        window.lifts.push({ name: "New Exercise", group: "My Workout", order: window.lifts.length + 1, start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8], excluded: false });
+        window.lifts.push({ name: "New Exercise", group: "My Workout", order: window.lifts.length + 1, start: 0, curr: 0, goal: 0, minR: 8, maxR: 12, inc: 5, sets: [8, 8, 8], excluded: false, notes: "" });
         window.openModal(window.lifts.length - 1);
     };
 
@@ -231,6 +235,7 @@
         document.getElementById('editMin').value = l.minR;
         document.getElementById('editMax').value = l.maxR;
         document.getElementById('editExclude').checked = l.excluded || false;
+        document.getElementById('editNotes').value = l.notes || "";
         document.getElementById('editModal').style.display = 'flex';
     };
 
@@ -251,6 +256,7 @@
         window.lifts[i].minR = parseInt(document.getElementById('editMin').value) || 0;
         window.lifts[i].maxR = parseInt(document.getElementById('editMax').value) || 0;
         window.lifts[i].excluded = document.getElementById('editExclude').checked;
+        window.lifts[i].notes = document.getElementById('editNotes').value;
         window.saveToCloud();
         window.closeModal();
     };
